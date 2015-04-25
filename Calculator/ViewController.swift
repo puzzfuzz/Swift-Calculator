@@ -10,16 +10,123 @@ import UIKit
 
 class ViewController: UIViewController {
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+    let π = M_PI
+    
+    @IBOutlet weak var display: UILabel!
+    @IBOutlet weak var history: UILabel!
+    
+    var userIsTyping = false
+    var opperandStack = [Double]()
+    var opperandHistory = [String]()
+
+    @IBAction func clearTouched(sender: UIButton) {
+        resetData()
+        resetView()
+    }
+    
+    func resetData() {
+        userIsTyping = false
+        opperandStack = [Double]()
+        opperandHistory = [String]()
+    }
+    
+    func resetView() {
+        display.text! = "0"
+        history.text! = " "
+    }
+    
+    @IBAction func numberTouched(sender: UIButton) {
+        var number = sender.currentTitle!
+        
+        if !userIsTyping {
+            display.text! = ""
+            userIsTyping = true
+        }
+        display.text! += number
+
     }
 
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
+    @IBAction func decimalTouched(sender: UIButton) {
+        if display.text!.rangeOfString(".") == nil {
+            display.text! += "."
+            userIsTyping = true
+        }
     }
+    
+    @IBAction func enterTouched(sender: AnyObject) {
+        enter()
+    }
+    
+    func enter() {
+        enter(true)
+    }
+    
+    func enter (shouldUpdatehistory: Bool) {
+        userIsTyping = false
+        opperandStack.append(displayValue)
+        println(opperandStack)
+        if shouldUpdatehistory {
+            updateHistory(display.text!)
+        }
+    }
+    
+    func updateHistory(op: String) {
+        opperandHistory.append(op)
+        history.text! = "\(opperandHistory)"
+    }
+    
+    @IBAction func functionTouched(sender: UIButton) {
+        let functionType = sender.currentTitle!
+        if userIsTyping {
+            enter()
+        }
 
-
+        switch functionType {
+        case "✕": performOperation { $0 * $1 }
+        case "÷": performOperation { $1 / $0 }
+        case "-": performOperation { $1 - $0 }
+        case "+": performOperation { $0 + $1 }
+        case "√": performOperationSingle { sqrt($0) }
+        case "sin": performOperationSingle { sin($0) }
+        case "cos": performOperationSingle { cos($0) }
+        case "π": enterConstant(π, withSymbol: "π")
+        default: break
+        }
+        
+        updateHistory(functionType)
+    }
+    
+    func performOperation (operation: (Double, Double) -> Double) {
+        if (opperandStack.count >= 2) {
+            displayValue = operation(opperandStack.removeLast(), opperandStack.removeLast())
+            enter(false)
+        }
+    }
+    
+    func performOperationSingle (op: Double -> Double) {
+        if (opperandStack.count >= 1) {
+            displayValue = op(opperandStack.removeLast())
+            enter(false)
+        }
+    }
+    
+    func enterConstant (constant: Double, withSymbol symbol:String) {
+        if userIsTyping {
+            enter()
+        }
+        display.text! = "\(constant)"
+        updateHistory(symbol)
+        enter(false)
+    }
+    
+    var displayValue: Double {
+        get {
+            return NSNumberFormatter().numberFromString(display.text!)!.doubleValue
+        }
+        set {
+            display.text = "\(newValue)"
+            userIsTyping = false
+        }
+    }
 }
 
