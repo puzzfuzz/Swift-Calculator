@@ -19,6 +19,19 @@ class ViewController: UIViewController {
     var opperandStack = [Double]()
     var opperandHistory = [String]()
 
+    // Handles conversion to/from Double for primary display
+    var displayValue: Double {
+        get {
+            return NSNumberFormatter().numberFromString(display.text!)!.doubleValue
+        }
+        set {
+            display.text = "\(newValue)"
+            userIsTyping = false
+        }
+    }
+    
+    /****** CLEAR button handling ******/
+    
     @IBAction func clearTouched(sender: UIButton) {
         resetData()
         resetView()
@@ -35,6 +48,8 @@ class ViewController: UIViewController {
         history.text! = " "
     }
     
+    /****** NUMERIC button handling ******/
+    
     @IBAction func numberTouched(sender: UIButton) {
         var number = sender.currentTitle!
         
@@ -45,6 +60,8 @@ class ViewController: UIViewController {
         display.text! += number
 
     }
+    
+    /****** DECIMAL point button handling ******/
 
     @IBAction func decimalTouched(sender: UIButton) {
         if display.text!.rangeOfString(".") == nil {
@@ -53,19 +70,22 @@ class ViewController: UIViewController {
         }
     }
     
+    /****** ENTER button and opperand publishing / history handling ******/
+    
     @IBAction func enterTouched(sender: AnyObject) {
         enter()
     }
     
+    //Convenient overload
     func enter() {
         enter(true)
     }
     
-    func enter (shouldUpdatehistory: Bool) {
+    func enter (shouldUpdateHistory: Bool) {
         userIsTyping = false
         opperandStack.append(displayValue)
         println(opperandStack)
-        if shouldUpdatehistory {
+        if shouldUpdateHistory {
             updateHistory(display.text!)
         }
     }
@@ -74,6 +94,8 @@ class ViewController: UIViewController {
         opperandHistory.append(op)
         history.text! = "\(opperandHistory)"
     }
+    
+    /****** FUNCTION and CONSTANT button handling ******/
     
     @IBAction func functionTouched(sender: UIButton) {
         let functionType = sender.currentTitle!
@@ -119,14 +141,5 @@ class ViewController: UIViewController {
         enter(false)
     }
     
-    var displayValue: Double {
-        get {
-            return NSNumberFormatter().numberFromString(display.text!)!.doubleValue
-        }
-        set {
-            display.text = "\(newValue)"
-            userIsTyping = false
-        }
-    }
 }
 
