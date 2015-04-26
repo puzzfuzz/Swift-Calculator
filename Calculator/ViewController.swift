@@ -14,9 +14,10 @@ class ViewController: UIViewController {
     
     @IBOutlet weak var display: UILabel!
     @IBOutlet weak var history: UILabel!
+
+    var brain = CalculatorBrain()
     
     var userIsTyping = false
-    var opperandStack = [Double]()
     var opperandHistory = [String]()
 
     // Handles conversion to/from Double for primary display
@@ -29,9 +30,9 @@ class ViewController: UIViewController {
         }
         set {
             if newValue == nil {
-                display.text = ""
+                display.text = " "
             } else {
-                display.text = "\(newValue)"
+                display.text = "\(newValue!)"
             }
             userIsTyping = false
         }
@@ -46,7 +47,7 @@ class ViewController: UIViewController {
     
     func resetData() {
         userIsTyping = false
-        opperandStack = [Double]()
+        brain.reset()
         opperandHistory = [String]()
     }
     
@@ -127,12 +128,13 @@ class ViewController: UIViewController {
     func enter (shouldUpdateHistory: Bool) {
         userIsTyping = false
         if let num = displayValue {
-            opperandStack.append(num)
-            println(opperandStack)
+            displayValue = brain.pushOperand(num)
+
             if shouldUpdateHistory {
                 updateHistory(display.text!)
             }
         }
+        
     }
     
     func updateHistory(op: String) {
@@ -143,41 +145,15 @@ class ViewController: UIViewController {
     /****** FUNCTION and CONSTANT button handling ******/
     
     @IBAction func functionTouched(sender: UIButton) {
-        let functionType = sender.currentTitle!
         if userIsTyping {
             enter()
         }
-
-        switch functionType {
-        case "✕": performOperation("✕") { $0 * $1 }
-        case "÷": performOperation("÷") { $1 / $0 }
-        case "-": performOperation("-") { $1 - $0 }
-        case "+": performOperation("+") { $0 + $1 }
-        case "√": performOperation("√") { sqrt($0) }
-        case "sin": performOperation("sin") { sin($0) }
-        case "cos": performOperation("cos") { cos($0) }
-        case "π": enterConstant(π, withSymbol: "π")
-        default: break
+        if let operation = sender.currentTitle {
+            displayValue = brain.performOperation(operation)
+            updateHistory(operation)
+            updateHistory("=")
         }
         
-    }
-    
-    func performOperation (symbol: String, operation: (Double, Double) -> Double) {
-        if (opperandStack.count >= 2) {
-            displayValue = operation(opperandStack.removeLast(), opperandStack.removeLast())
-            enter(false)
-            updateHistory(symbol)
-            updateHistory("=")
-        }
-    }
-    
-    func performOperation (symbol: String, op: Double -> Double) {
-        if (opperandStack.count >= 1) {
-            displayValue = op(opperandStack.removeLast())
-            enter(false)
-            updateHistory(symbol)
-            updateHistory("=")
-        }
     }
     
     func enterConstant (constant: Double, withSymbol symbol:String) {
