@@ -48,6 +48,18 @@ class ViewController: UIViewController {
         history.text! = " "
     }
     
+    /****** BACK button handling ******/
+
+    @IBAction func backTouched(sender: UIButton) {
+        if count(display.text!) > 1 {
+            display.text! = dropLast(display.text!)
+        } else if count(display.text!) == 1 {
+            display.text! = "0"
+            userIsTyping = false
+        }
+    }
+    
+    
     /****** NUMERIC button handling ******/
     
     @IBAction func numberTouched(sender: UIButton) {
