@@ -84,6 +84,26 @@ class ViewController: UIViewController {
         }
     }
     
+    /****** NEGATION button handling ******/
+    
+    @IBAction func negationTouched(sender: UIButton) {
+        //shortcircuit attempting to negate a 0
+        if display.text! == "0" {
+            return
+        }
+        
+        if !userIsTyping {
+            displayValue = -displayValue
+            enter()
+        } else {
+            if let idx = display.text!.rangeOfString("-") {
+                display.text!.removeRange(idx)
+            } else {
+                display.text! = "-" + display.text!
+            }
+        }
+    }
+    
     /****** ENTER button and opperand publishing / history handling ******/
     
     @IBAction func enterTouched(sender: AnyObject) {
