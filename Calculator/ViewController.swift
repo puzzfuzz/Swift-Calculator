@@ -20,12 +20,19 @@ class ViewController: UIViewController {
     var opperandHistory = [String]()
 
     // Handles conversion to/from Double for primary display
-    var displayValue: Double {
+    var displayValue: Double? {
         get {
-            return NSNumberFormatter().numberFromString(display.text!)!.doubleValue
+            if let num = NSNumberFormatter().numberFromString(display.text!) {
+                return num.doubleValue
+            }
+            return nil
         }
         set {
-            display.text = "\(newValue)"
+            if newValue == nil {
+                display.text = ""
+            } else {
+                display.text = "\(newValue)"
+            }
             userIsTyping = false
         }
     }
@@ -47,6 +54,20 @@ class ViewController: UIViewController {
         display.text! = "0"
         history.text! = " "
     }
+    
+    /****** BACK button handling ******/
+
+    @IBAction func backTouched(sender: UIButton) {
+        if userIsTyping {
+            if count(display.text!) > 1 {
+                display.text! = dropLast(display.text!)
+            } else if count(display.text!) == 1 {
+                display.text! = "0"
+                userIsTyping = false
+            }
+        }
+    }
+    
     
     /****** NUMERIC button handling ******/
     
@@ -70,6 +91,28 @@ class ViewController: UIViewController {
         }
     }
     
+    /****** NEGATION button handling ******/
+    
+    @IBAction func negationTouched(sender: UIButton) {
+        //shortcircuit attempting to negate a 0
+        if display.text! == "0" {
+            return
+        }
+        
+        if !userIsTyping {
+            if let double = displayValue {
+                displayValue = -double
+                enter()
+            }
+        } else {
+            if let idx = display.text!.rangeOfString("-") {
+                display.text!.removeRange(idx)
+            } else {
+                display.text! = "-" + display.text!
+            }
+        }
+    }
+    
     /****** ENTER button and opperand publishing / history handling ******/
     
     @IBAction func enterTouched(sender: AnyObject) {
@@ -83,10 +126,12 @@ class ViewController: UIViewController {
     
     func enter (shouldUpdateHistory: Bool) {
         userIsTyping = false
-        opperandStack.append(displayValue)
-        println(opperandStack)
-        if shouldUpdateHistory {
-            updateHistory(display.text!)
+        if let num = displayValue {
+            opperandStack.append(num)
+            println(opperandStack)
+            if shouldUpdateHistory {
+                updateHistory(display.text!)
+            }
         }
     }
     
@@ -104,31 +149,34 @@ class ViewController: UIViewController {
         }
 
         switch functionType {
-        case "✕": performOperation { $0 * $1 }
-        case "÷": performOperation { $1 / $0 }
-        case "-": performOperation { $1 - $0 }
-        case "+": performOperation { $0 + $1 }
-        case "√": performOperationSingle { sqrt($0) }
-        case "sin": performOperationSingle { sin($0) }
-        case "cos": performOperationSingle { cos($0) }
+        case "✕": performOperation("✕") { $0 * $1 }
+        case "÷": performOperation("÷") { $1 / $0 }
+        case "-": performOperation("-") { $1 - $0 }
+        case "+": performOperation("+") { $0 + $1 }
+        case "√": performOperation("√") { sqrt($0) }
+        case "sin": performOperation("sin") { sin($0) }
+        case "cos": performOperation("cos") { cos($0) }
         case "π": enterConstant(π, withSymbol: "π")
         default: break
         }
         
-        updateHistory(functionType)
     }
     
-    func performOperation (operation: (Double, Double) -> Double) {
+    func performOperation (symbol: String, operation: (Double, Double) -> Double) {
         if (opperandStack.count >= 2) {
             displayValue = operation(opperandStack.removeLast(), opperandStack.removeLast())
             enter(false)
+            updateHistory(symbol)
+            updateHistory("=")
         }
     }
     
-    func performOperationSingle (op: Double -> Double) {
+    func performOperation (symbol: String, op: Double -> Double) {
         if (opperandStack.count >= 1) {
             displayValue = op(opperandStack.removeLast())
             enter(false)
+            updateHistory(symbol)
+            updateHistory("=")
         }
     }
     
