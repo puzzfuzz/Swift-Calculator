@@ -51,11 +51,13 @@ class ViewController: UIViewController {
     /****** BACK button handling ******/
 
     @IBAction func backTouched(sender: UIButton) {
-        if count(display.text!) > 1 {
-            display.text! = dropLast(display.text!)
-        } else if count(display.text!) == 1 {
-            display.text! = "0"
-            userIsTyping = false
+        if userIsTyping {
+            if count(display.text!) > 1 {
+                display.text! = dropLast(display.text!)
+            } else if count(display.text!) == 1 {
+                display.text! = "0"
+                userIsTyping = false
+            }
         }
     }
     
@@ -116,31 +118,34 @@ class ViewController: UIViewController {
         }
 
         switch functionType {
-        case "✕": performOperation { $0 * $1 }
-        case "÷": performOperation { $1 / $0 }
-        case "-": performOperation { $1 - $0 }
-        case "+": performOperation { $0 + $1 }
-        case "√": performOperationSingle { sqrt($0) }
-        case "sin": performOperationSingle { sin($0) }
-        case "cos": performOperationSingle { cos($0) }
+        case "✕": performOperation("✕") { $0 * $1 }
+        case "÷": performOperation("÷") { $1 / $0 }
+        case "-": performOperation("-") { $1 - $0 }
+        case "+": performOperation("+") { $0 + $1 }
+        case "√": performOperation("√") { sqrt($0) }
+        case "sin": performOperation("sin") { sin($0) }
+        case "cos": performOperation("cos") { cos($0) }
         case "π": enterConstant(π, withSymbol: "π")
         default: break
         }
         
-        updateHistory(functionType)
     }
     
-    func performOperation (operation: (Double, Double) -> Double) {
+    func performOperation (symbol: String, operation: (Double, Double) -> Double) {
         if (opperandStack.count >= 2) {
             displayValue = operation(opperandStack.removeLast(), opperandStack.removeLast())
             enter(false)
+            updateHistory(symbol)
+            updateHistory("=")
         }
     }
     
-    func performOperationSingle (op: Double -> Double) {
+    func performOperation (symbol: String, op: Double -> Double) {
         if (opperandStack.count >= 1) {
             displayValue = op(opperandStack.removeLast())
             enter(false)
+            updateHistory(symbol)
+            updateHistory("=")
         }
     }
     
