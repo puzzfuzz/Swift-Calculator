@@ -20,12 +20,19 @@ class ViewController: UIViewController {
     var opperandHistory = [String]()
 
     // Handles conversion to/from Double for primary display
-    var displayValue: Double {
+    var displayValue: Double? {
         get {
-            return NSNumberFormatter().numberFromString(display.text!)!.doubleValue
+            if let num = NSNumberFormatter().numberFromString(display.text!) {
+                return num.doubleValue
+            }
+            return nil
         }
         set {
-            display.text = "\(newValue)"
+            if newValue == nil {
+                display.text = ""
+            } else {
+                display.text = "\(newValue)"
+            }
             userIsTyping = false
         }
     }
@@ -93,8 +100,10 @@ class ViewController: UIViewController {
         }
         
         if !userIsTyping {
-            displayValue = -displayValue
-            enter()
+            if let double = displayValue {
+                displayValue = -double
+                enter()
+            }
         } else {
             if let idx = display.text!.rangeOfString("-") {
                 display.text!.removeRange(idx)
@@ -117,10 +126,12 @@ class ViewController: UIViewController {
     
     func enter (shouldUpdateHistory: Bool) {
         userIsTyping = false
-        opperandStack.append(displayValue)
-        println(opperandStack)
-        if shouldUpdateHistory {
-            updateHistory(display.text!)
+        if let num = displayValue {
+            opperandStack.append(num)
+            println(opperandStack)
+            if shouldUpdateHistory {
+                updateHistory(display.text!)
+            }
         }
     }
     
