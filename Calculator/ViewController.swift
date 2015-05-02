@@ -9,8 +9,6 @@
 import UIKit
 
 class ViewController: UIViewController {
-
-    let π = M_PI
     
     @IBOutlet weak var display: UILabel!
     @IBOutlet weak var history: UILabel!
@@ -18,7 +16,7 @@ class ViewController: UIViewController {
     var brain = CalculatorBrain()
     
     var userIsTyping = false
-    var opperandHistory = [String]()
+//    var opperandHistory = [String]()
 
     // Handles conversion to/from Double for primary display
     var displayValue: Double? {
@@ -48,7 +46,7 @@ class ViewController: UIViewController {
     func resetData() {
         userIsTyping = false
         brain.reset()
-        opperandHistory = [String]()
+//        opperandHistory = [String]()
     }
     
     func resetView() {
@@ -131,15 +129,17 @@ class ViewController: UIViewController {
             displayValue = brain.pushOperand(num)
 
             if shouldUpdateHistory {
-                updateHistory(display.text!)
+//                updateHistory(display.text!)
+                updateHistory()
             }
         }
         
     }
     
-    func updateHistory(op: String) {
-        opperandHistory.append(op)
-        history.text! = "\(opperandHistory)"
+//    func updateHistory(op: String) {
+    func updateHistory() {
+//        opperandHistory.append(op)
+        history.text! = "\(brain)"
     }
     
     /****** FUNCTION and CONSTANT button handling ******/
@@ -150,8 +150,9 @@ class ViewController: UIViewController {
         }
         if let operation = sender.currentTitle {
             displayValue = brain.performOperation(operation)
-            updateHistory(operation)
-            updateHistory("=")
+            updateHistory()
+//            updateHistory(operation)
+//            updateHistory("=")
         }
         
     }
@@ -161,7 +162,8 @@ class ViewController: UIViewController {
             enter()
         }
         display.text! = "\(constant)"
-        updateHistory(symbol)
+//        updateHistory(symbol)
+        updateHistory()
         enter(false)
     }
     
