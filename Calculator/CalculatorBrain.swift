@@ -15,7 +15,7 @@ class CalculatorBrain: Printable {
         case Operand(Double)
         case Variable(String)
         case UnaryOperation(String, Double -> Double)
-        case BinaryOperation(String, (Double, Double) -> Double)
+        case BinaryOperation(String, Int, (Double, Double) -> Double)
         
         var description: String {
             get {
@@ -28,7 +28,7 @@ class CalculatorBrain: Printable {
                     return symbol
                 case .UnaryOperation(let symbol, _):
                     return symbol
-                case .BinaryOperation(let symbol, _):
+                case .BinaryOperation(let symbol, _, _):
                     return symbol
                 }
             }
@@ -46,10 +46,10 @@ class CalculatorBrain: Printable {
             knownOps[op.description] = op
         }
         learnOp(Op.Consant("π", M_PI))
-        learnOp(Op.BinaryOperation("✕", *))
-        learnOp(Op.BinaryOperation("÷") { $1 / $0 })
-        learnOp(Op.BinaryOperation("-") { $1 - $0 })
-        learnOp(Op.BinaryOperation("+", +))
+        learnOp(Op.BinaryOperation("✕", 1, *))
+        learnOp(Op.BinaryOperation("÷", 1) { $1 / $0 })
+        learnOp(Op.BinaryOperation("-", 0) { $1 - $0 })
+        learnOp(Op.BinaryOperation("+", 0, +))
         learnOp(Op.UnaryOperation("√", sqrt))
         learnOp(Op.UnaryOperation("sin", sin))
         learnOp(Op.UnaryOperation("cos", cos))
@@ -101,7 +101,7 @@ class CalculatorBrain: Printable {
                 if let op1 = operandEvaluation.result {
                     return (operation(op1), operandEvaluation.remainingOps)
                 }
-            case .BinaryOperation(_, let operation):
+            case .BinaryOperation(_, _, let operation):
                 let operandEvaluation1 = evaluate(remainingOps)
                 if let op1 = operandEvaluation1.result {
                     let operandEvaluation2 = evaluate(operandEvaluation1.remainingOps)
@@ -142,7 +142,7 @@ class CalculatorBrain: Printable {
                 } else {
                     return ("\(op)(?)", operandEvaluation.remainingOps)
                 }
-            case .BinaryOperation(_, let operation):
+            case .BinaryOperation(_, _, let operation):
                 let operandEvaluation1 = describe(remainingOps)
                 if let op1 = operandEvaluation1.result {
                     let operandEvaluation2 = describe(operandEvaluation1.remainingOps)
@@ -196,7 +196,7 @@ class CalculatorBrain: Printable {
             }
             //fallthrough for empty opstack or no valid description on remaining stack
             return ("\(op)(?)", remainingOps)
-        case .BinaryOperation(let opSymbol, _):
+        case .BinaryOperation(let opSymbol, let opWeight, _):
             // To describe a binary opperation, we need to know what the two terms are 
             //  to determine if either term needs perens around it to solve order-of-operation ambiguity
             if !remainingOps.isEmpty {
@@ -218,11 +218,11 @@ class CalculatorBrain: Printable {
                                 // ex: π + ?, x * ?, ? - 2.5, ? / cos(90)
                                 // no perens needed
                                 term1Str = description1
-                            case .BinaryOperation(let term1Symbol, _):
+                            case .BinaryOperation(let term1Symbol, let term1Weight, _):
                                 // ex: (4+3) + ?, (4-3) * ?, etc.
-                                // if current operation is division or multiplication, or if the 1st term is either of those,
-                                // perens are needed around the 2nd term to show proper order-of-operations
-                                if opSymbol == "÷" || opSymbol == "✕" || term1Symbol == "÷" || term1Symbol == "✕" {
+                                // if operation weights are equiv, no perens needed.
+
+                                if opWeight != term1Weight {
                                     term1Str = "(\(description1))"
                                 } else {
                                     term1Str = description1
@@ -234,11 +234,10 @@ class CalculatorBrain: Printable {
                                 // ex: ? + π, ? * cos(90), etc
                                 // no perens needed
                                 term2Str = description2
-                            case .BinaryOperation(let term2Symbol, _):
+                            case .BinaryOperation(let term2Symbol, let term2Weight, _):
                                 // ex: ? * (4+3), ? + (4-3)
-                                // if current operation is division or multiplication, or if the 2nd term is either of those,
-                                // perens are needed around the 2nd term to show proper order-of-operations
-                                if opSymbol == "÷" || opSymbol == "✕" || term2Symbol == "÷" || term2Symbol == "✕" {
+                                // if operation weights are equiv, no perens needed.
+                                if opWeight != term2Weight {
                                     term2Str = "(\(description2))"
                                 } else {
                                     term2Str = description2
