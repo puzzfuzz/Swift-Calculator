@@ -116,58 +116,21 @@ class CalculatorBrain: Printable {
         return (nil, ops)
     }
     
-    private func describe(ops: [Op]) -> (result: String?, remainingOps: [Op]) {
-        if !ops.isEmpty {
-            var remainingOps = ops
-            let op = remainingOps.removeLast()
-            
-            switch op {
-            case .Consant(let symbol, _):
-                return (symbol, remainingOps)
-            case .Operand(let operand):
-                return ("\(op)", remainingOps)
-            case .Variable(let symbol):
-                if let variable = variableValues[symbol] {
-                    return ("\(op)", remainingOps)
-                }
-            case .UnaryOperation(_, let operation):
-                let operandEvaluation = describe(remainingOps)
-                if let op1 = operandEvaluation.result {
-                    if let hasPerens = op1.rangeOfString("(") {
-                        return ("\(op)\(op1)", operandEvaluation.remainingOps)
-                    } else {
-                        return ("\(op)(\(op1))", operandEvaluation.remainingOps)
-                    }
-
-                } else {
-                    return ("\(op)(?)", operandEvaluation.remainingOps)
-                }
-            case .BinaryOperation(_, _, let operation):
-                let operandEvaluation1 = describe(remainingOps)
-                if let op1 = operandEvaluation1.result {
-                    let operandEvaluation2 = describe(operandEvaluation1.remainingOps)
-                    if let op2 = operandEvaluation2.result {
-                        return ("(\(op1)\(op)\(op2))", operandEvaluation2.remainingOps)
-                    } else {
-                        return ("(\(op1)\(op)?)", operandEvaluation2.remainingOps)
-                    }
-                } else {
-                    return ("(?\(op)?)", operandEvaluation1.remainingOps)
-            }
-            }
+    // *************** CalculatorBrain Description ***************
+    
+    var description: String {
+        get {
+            return describe(opStack) + " ="
         }
-        
-        
-        return (nil, ops)
     }
     
-    private func describeBetter(ops: [Op]) -> String {
+    private func describe(ops: [Op]) -> String {
         var expressions = [String]()
         var remainingOps = ops
         while !remainingOps.isEmpty {
             let op = remainingOps.removeLast()
             
-            var (result, remaining) = describeBetter(op, opStack: remainingOps)
+            var (result, remaining) = describe(op, opStack: remainingOps)
             if result != nil {
                 expressions.append(result!)
             }
@@ -177,7 +140,7 @@ class CalculatorBrain: Printable {
         return "\(expressions)".stringByReplacingOccurrencesOfString("[", withString: "").stringByReplacingOccurrencesOfString("]", withString: "")
     }
     
-    private func describeBetter(op: Op, opStack: [Op]) -> (description: String?, remainingOps: [Op]) {
+    private func describe(op: Op, opStack: [Op]) -> (description: String?, remainingOps: [Op]) {
         var remainingOps = opStack
         switch op {
         case .Consant(let symbol, _):
@@ -189,7 +152,7 @@ class CalculatorBrain: Printable {
         case .UnaryOperation(let symbol, _):
             if !remainingOps.isEmpty {
                 let term = remainingOps.removeLast()
-                let termDescriptionResult = describeBetter(term, opStack: remainingOps)
+                let termDescriptionResult = describe(term, opStack: remainingOps)
                 if let description = termDescriptionResult.description {
                     return ("\(op)(\(description))", termDescriptionResult.remainingOps)
                 }
@@ -197,20 +160,27 @@ class CalculatorBrain: Printable {
             //fallthrough for empty opstack or no valid description on remaining stack
             return ("\(op)(?)", remainingOps)
         case .BinaryOperation(let opSymbol, let opWeight, _):
-            // To describe a binary opperation, we need to know what the two terms are 
+            //used to output terms in the correct order
+            var term1Str = "", term2Str = ""
+
+            // To describe a binary opperation, we need to know what the two terms are
             //  to determine if either term needs perens around it to solve order-of-operation ambiguity
             if !remainingOps.isEmpty {
                 let term1 = remainingOps.removeLast()
-                let term1DescriptionResult = describeBetter(term1, opStack: remainingOps)
+                let term1DescriptionResult = describe(term1, opStack: remainingOps)
                 if let description1 = term1DescriptionResult.description {
+                    //default
+                    term1Str = description1
+                    term2Str = "?"
+                    
                     remainingOps = term1DescriptionResult.remainingOps
+
                     if !remainingOps.isEmpty {
                         let term2 = remainingOps.removeLast()
-                        let term2DescriptionResult = describeBetter(term2, opStack: remainingOps)
+                        let term2DescriptionResult = describe(term2, opStack: remainingOps)
                         
                         if let description2 = term2DescriptionResult.description {
                             remainingOps = term2DescriptionResult.remainingOps
-                            var term1Str = "", term2Str = "" //used to output in the correct order based on op symbol
                         
                             //have both terms, check if we should add perens around either term
                             switch term1 {
@@ -243,39 +213,14 @@ class CalculatorBrain: Printable {
                                     term2Str = description2
                                 }
                             }
-
-                            // if the operation is division or subtraction, swap the order of the descriptions to make it make sense visually
-                            switch opSymbol {
-                            case "÷","-":
-                                return ("\(term2Str)\(op)\(term1Str)", remainingOps)
-                            default:
-                                return ("\(term1Str)\(op)\(term2Str)", remainingOps)
-                            }
-                        } else {
-                            //has term 1, no term 2
-                            return ("\(description1)\(op)?", remainingOps)
                         }
-                    } else {
-                        //has term 1, no term 2
-                        return ("\(description1)\(op)?", remainingOps)
                     }
+                    
+                    return ("\(term2Str)\(op)\(term1Str)", remainingOps)
                 } // no term 1, didn't bother checking term 2
             }
             //fallthrough for empty opstack or no valid description on remaining stack
             return ("?\(op)?", remainingOps)
-        }
-    }
-
-    var description: String {
-        get {
-            return describeBetter(opStack)
-//            var output = ""
-//            let (result, remainer) = describe(opStack)
-//            if result != nil {
-//                return result!
-//            } else {
-//                return " "
-//            }
         }
     }
 }
