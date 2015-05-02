@@ -163,8 +163,8 @@ class CalculatorBrain: Printable {
     
     private func describeBetter(ops: [Op]) -> String {
         var expressions = [String]()
-        while !ops.isEmpty {
-            var remainingOps = ops
+        var remainingOps = ops
+        while !remainingOps.isEmpty {
             let op = remainingOps.removeLast()
             
             var (result, remaining) = describeBetter(op, opStack: remainingOps)
@@ -174,7 +174,7 @@ class CalculatorBrain: Printable {
             remainingOps = remaining
         }
         
-        return "\(expressions)"
+        return "\(expressions)".stringByReplacingOccurrencesOfString("[", withString: "").stringByReplacingOccurrencesOfString("]", withString: "")
     }
     
     private func describeBetter(op: Op, opStack: [Op]) -> (description: String?, remainingOps: [Op]) {
@@ -189,9 +189,9 @@ class CalculatorBrain: Printable {
         case .UnaryOperation(let symbol, _):
             if !remainingOps.isEmpty {
                 let term = remainingOps.removeLast()
-                let termDescriptionResult = describeBetter(op, opStack: opStack)
+                let termDescriptionResult = describeBetter(term, opStack: remainingOps)
                 if let description = termDescriptionResult.description {
-                    return ("\(op)(\(description))", remainingOps)
+                    return ("\(op)(\(description))", termDescriptionResult.remainingOps)
                 }
             }
             //fallthrough for empty opstack or no valid description on remaining stack
@@ -203,51 +203,58 @@ class CalculatorBrain: Printable {
                 let term1 = remainingOps.removeLast()
                 let term1DescriptionResult = describeBetter(term1, opStack: remainingOps)
                 if let description1 = term1DescriptionResult.description {
-                    let term2 = remainingOps.removeLast()
-                    let term2DescriptionResult = describeBetter(term2, opStack: remainingOps)
-                    
-                    if let description2 = term2DescriptionResult.description {
-                        var term1Str = "", term2Str = "" //used to output in the correct order based on op symbol
-                    
-                        //have both terms, check if we should add perens around either term
-                        switch term1 {
-                        case .Consant, .Variable, .Operand, .UnaryOperation:
-                            // ex: π + ?, x * ?, ? - 2.5, ? / cos(90)
-                            // no perens needed
-                            term1Str = description1
-                        case .BinaryOperation(let term1Symbol, _):
-                            // ex: (4+3) + ?, (4-3) * ?, etc.
-                            // if current operation is division or multiplication, or if the 1st term is either of those,
-                            // perens are needed around the 2nd term to show proper order-of-operations
-                            if opSymbol == "÷" || opSymbol == "✕" || term1Symbol == "÷" || term1Symbol == "✕" {
-                                term1Str = "(\(description1))"
-                            } else {
-                                term1Str = description1
-                            }
-                        }
+                    remainingOps = term1DescriptionResult.remainingOps
+                    if !remainingOps.isEmpty {
+                        let term2 = remainingOps.removeLast()
+                        let term2DescriptionResult = describeBetter(term2, opStack: remainingOps)
                         
-                        switch term2 {
-                        case .Consant, .Variable, .Operand, .UnaryOperation:
-                            // ex: ? + π, ? * cos(90), etc
-                            // no perens needed
-                            term2Str = description2
-                        case .BinaryOperation(let term2Symbol, _):
-                            // ex: ? * (4+3), ? + (4-3)
-                            // if current operation is division or multiplication, or if the 2nd term is either of those,
-                            // perens are needed around the 2nd term to show proper order-of-operations
-                            if opSymbol == "÷" || opSymbol == "✕" || term2Symbol == "÷" || term2Symbol == "✕" {
-                                term2Str = "(\(description2))"
-                            } else {
-                                term2Str = description2
+                        if let description2 = term2DescriptionResult.description {
+                            remainingOps = term2DescriptionResult.remainingOps
+                            var term1Str = "", term2Str = "" //used to output in the correct order based on op symbol
+                        
+                            //have both terms, check if we should add perens around either term
+                            switch term1 {
+                            case .Consant, .Variable, .Operand, .UnaryOperation:
+                                // ex: π + ?, x * ?, ? - 2.5, ? / cos(90)
+                                // no perens needed
+                                term1Str = description1
+                            case .BinaryOperation(let term1Symbol, _):
+                                // ex: (4+3) + ?, (4-3) * ?, etc.
+                                // if current operation is division or multiplication, or if the 1st term is either of those,
+                                // perens are needed around the 2nd term to show proper order-of-operations
+                                if opSymbol == "÷" || opSymbol == "✕" || term1Symbol == "÷" || term1Symbol == "✕" {
+                                    term1Str = "(\(description1))"
+                                } else {
+                                    term1Str = description1
+                                }
                             }
-                        }
+                            
+                            switch term2 {
+                            case .Consant, .Variable, .Operand, .UnaryOperation:
+                                // ex: ? + π, ? * cos(90), etc
+                                // no perens needed
+                                term2Str = description2
+                            case .BinaryOperation(let term2Symbol, _):
+                                // ex: ? * (4+3), ? + (4-3)
+                                // if current operation is division or multiplication, or if the 2nd term is either of those,
+                                // perens are needed around the 2nd term to show proper order-of-operations
+                                if opSymbol == "÷" || opSymbol == "✕" || term2Symbol == "÷" || term2Symbol == "✕" {
+                                    term2Str = "(\(description2))"
+                                } else {
+                                    term2Str = description2
+                                }
+                            }
 
-                        // if the operation is division or subtraction, swap the order of the descriptions to make it make sense visually
-                        switch opSymbol {
-                        case "÷","-":
-                            return ("\(term2Str)\(op)\(term1Str)", remainingOps)
-                        default:
-                            return ("\(term1Str)\(op)\(term2Str)", remainingOps)
+                            // if the operation is division or subtraction, swap the order of the descriptions to make it make sense visually
+                            switch opSymbol {
+                            case "÷","-":
+                                return ("\(term2Str)\(op)\(term1Str)", remainingOps)
+                            default:
+                                return ("\(term1Str)\(op)\(term2Str)", remainingOps)
+                            }
+                        } else {
+                            //has term 1, no term 2
+                            return ("\(description1)\(op)?", remainingOps)
                         }
                     } else {
                         //has term 1, no term 2
@@ -262,13 +269,14 @@ class CalculatorBrain: Printable {
 
     var description: String {
         get {
-            var output = ""
-            let (result, remainer) = describe(opStack)
-            if result != nil {
-                return result!
-            } else {
-                return " "
-            }
+            return describeBetter(opStack)
+//            var output = ""
+//            let (result, remainer) = describe(opStack)
+//            if result != nil {
+//                return result!
+//            } else {
+//                return " "
+//            }
         }
     }
 }
