@@ -35,6 +35,19 @@ class ViewController: UIViewController {
         }
     }
     
+    var displayResults: (result:Double?, error:CalculatorBrain.EvaluationException?) {
+        get {
+            return (displayValue, nil)
+        }
+        set {
+            if let exception = newValue.error {
+                display.text = stringForEvaluationException(exception)
+            } else {
+                displayValue = newValue.result
+            }
+        }
+    }
+    
     /****** CLEAR button handling ******/
     
     @IBAction func clearTouched(sender: UIButton) {
@@ -69,8 +82,7 @@ class ViewController: UIViewController {
     
     func undoOp() {
         brain.undoOp()
-        displayValue = brain.evaluate()
-        updateHistory()
+        updateResult(true)
     }
     
     
@@ -123,13 +135,13 @@ class ViewController: UIViewController {
             enter()
         }
         brain.pushOperand("M")
-        displayValue = brain.evaluate()
+        updateResult(false)
     }
     
     @IBAction func memorySetTouched(sender: UIButton) {
         userIsTyping = false
         brain.variableValues["M"] = displayValue
-        displayValue = brain.evaluate()
+        updateResult(false)
     }
     
     /****** FUNCTION and CONSTANT button handling ******/
@@ -139,8 +151,8 @@ class ViewController: UIViewController {
             enter()
         }
         if let operation = sender.currentTitle {
-            displayValue = brain.performOperation(operation)
-            updateHistory()
+            brain.performOperation(operation)
+            updateResult(true)
         }
         
     }
@@ -156,7 +168,7 @@ class ViewController: UIViewController {
     
     /****** ENTER button and opperand publishing / history handling ******/
     
-    @IBAction func enterTouched(sender: AnyObject) {
+    @IBAction func enterTouched(sender: UIButton) {
         enter()
     }
     
@@ -169,16 +181,37 @@ class ViewController: UIViewController {
         userIsTyping = false
         if let num = displayValue {
             displayValue = brain.pushOperand(num)
-
-            if shouldUpdateHistory {
-                updateHistory()
-            }
+            updateResult(shouldUpdateHistory)
         }
         
     }
     
     func updateHistory() {
         history.text! = "\(brain)"
+    }
+    
+    func updateResult(shouldUpdateHistory: Bool) {
+        displayResults = brain.evaluateAndReportErrors()
+        if shouldUpdateHistory {
+            updateHistory()
+        }
+    }
+    
+    /****** ERROR handling ******/
+    
+    func stringForEvaluationException (exception: CalculatorBrain.EvaluationException) -> String {
+        switch exception {
+        case .DivisionByZero:
+            return "Error: Division by 0!"
+        case .SquareRootOfNegativeNumber:
+            return "Error: Squareroot of a negative value!"
+        case .MissingOpperands:
+            return "Error: Missing operand!"
+        case .MissingVariable:
+            return "Error: Variable value not set!"
+        case .UnknownEvaluationException:
+            return "Error: Unknown evaluation exception!"
+        }
     }
 }
 

@@ -15,8 +15,8 @@ class CalculatorBrain: Printable {
         case Consant(String, Double)
         case Operand(Double)
         case Variable(String)
-        case UnaryOperation(String, Double -> Double)
-        case BinaryOperation(String, Int, (Double, Double) -> Double)
+        case UnaryOperation(String, ((Double) -> EvaluationException?)?, Double -> Double)
+        case BinaryOperation(String, Int, ((Double, Double) -> EvaluationException?)?, (Double, Double) -> Double)
         
         var description: String {
             get {
@@ -27,13 +27,21 @@ class CalculatorBrain: Printable {
                     return "\(operand)"
                 case .Variable(let symbol):
                     return symbol
-                case .UnaryOperation(let symbol, _):
+                case .UnaryOperation(let symbol, _, _):
                     return symbol
-                case .BinaryOperation(let symbol, _, _):
+                case .BinaryOperation(let symbol, _, _, _):
                     return symbol
                 }
             }
         }
+    }
+    
+    enum EvaluationException {
+        case DivisionByZero
+        case SquareRootOfNegativeNumber
+        case MissingOpperands
+        case MissingVariable
+        case UnknownEvaluationException
     }
     
     private var opStack = [Op]()
@@ -47,13 +55,23 @@ class CalculatorBrain: Printable {
             knownOps[op.description] = op
         }
         learnOp(Op.Consant("π", M_PI))
-        learnOp(Op.BinaryOperation("✕", 1, *))
-        learnOp(Op.BinaryOperation("÷", 1) { $1 / $0 })
-        learnOp(Op.BinaryOperation("-", 0) { $1 - $0 })
-        learnOp(Op.BinaryOperation("+", 0, +))
-        learnOp(Op.UnaryOperation("√", sqrt))
-        learnOp(Op.UnaryOperation("sin", sin))
-        learnOp(Op.UnaryOperation("cos", cos))
+        learnOp(Op.BinaryOperation("✕", 1, nil, *))
+        learnOp(Op.BinaryOperation("÷", 1, {(op1: Double, op2: Double) -> EvaluationException? in
+            if op1 == 0 {
+                return EvaluationException.DivisionByZero
+            }
+            return nil
+        }) { $1 / $0 })
+        learnOp(Op.BinaryOperation("-", 0, nil) { $1 - $0 })
+        learnOp(Op.BinaryOperation("+", 0, nil, +))
+        learnOp(Op.UnaryOperation("√", {
+            if $0 < 0 {
+                return EvaluationException.SquareRootOfNegativeNumber
+            }
+            return nil
+        }, sqrt))
+        learnOp(Op.UnaryOperation("sin", nil, sin))
+        learnOp(Op.UnaryOperation("cos", nil, cos))
     }
 
     /*************** Primary Operation API ***************/
@@ -95,12 +113,12 @@ class CalculatorBrain: Printable {
                 if let variable = variableValues[symbol] {
                     return (variable, remainingOps)
                 }
-            case .UnaryOperation(_, let operation):
+            case .UnaryOperation(_, let errorTest, let operation):
                 let operandEvaluation = evaluate(remainingOps)
                 if let op1 = operandEvaluation.result {
                     return (operation(op1), operandEvaluation.remainingOps)
                 }
-            case .BinaryOperation(_, _, let operation):
+            case .BinaryOperation(_, _, let errorTest, let operation):
                 let operandEvaluation1 = evaluate(remainingOps)
                 if let op1 = operandEvaluation1.result {
                     let operandEvaluation2 = evaluate(operandEvaluation1.remainingOps)
@@ -114,6 +132,66 @@ class CalculatorBrain: Printable {
         
         return (nil, ops)
     }
+    
+    func evaluateAndReportErrors() -> (result:Double?, error:EvaluationException?) {
+        let (result, _, exception) = evaluateAndReportErrors(opStack)
+        return (result, exception)
+    }
+    
+    private func evaluateAndReportErrors(ops: [Op]) -> (result: Double?, remainingOps: [Op], error: EvaluationException?) {
+        if !ops.isEmpty {
+            var remainingOps = ops
+            let op = remainingOps.removeLast()
+            
+            switch op {
+            case .Consant(_, let operand):
+                return (operand, remainingOps, nil)
+            case .Operand(let operand):
+                return (operand, remainingOps, nil)
+            case .Variable(let symbol):
+                if let variable = variableValues[symbol] {
+                    return (variable, remainingOps, nil)
+                } else {
+                    return (nil, remainingOps, EvaluationException.MissingVariable)
+                }
+            case .UnaryOperation(_, let errorTest, let operation):
+                let operandEvaluation = evaluateAndReportErrors(remainingOps)
+                if let error = operandEvaluation.error {
+                    return (nil, operandEvaluation.remainingOps, error)
+                }
+                if let op1 = operandEvaluation.result {
+                    if let error = errorTest?(op1) {
+                        return (nil, operandEvaluation.remainingOps, error)
+                    }
+                    return (operation(op1), operandEvaluation.remainingOps, nil)
+                }
+            case .BinaryOperation(_, _, let errorTest, let operation):
+                let operandEvaluation1 = evaluateAndReportErrors(remainingOps)
+                if let error = operandEvaluation1.error {
+                    return (nil, operandEvaluation1.remainingOps, error)
+                }
+                if let op1 = operandEvaluation1.result {
+                    let operandEvaluation2 = evaluateAndReportErrors(operandEvaluation1.remainingOps)
+                    if let error = operandEvaluation2.error {
+                        return (nil, operandEvaluation2.remainingOps, error)
+                    }
+                    if let op2 = operandEvaluation2.result {
+                        if let error = errorTest?(op1, op2) {
+                            return (nil, operandEvaluation2.remainingOps, error)
+                        }
+                        return (operation(op1, op2), operandEvaluation2.remainingOps, nil)
+                    }
+                    return (nil, operandEvaluation2.remainingOps, EvaluationException.MissingOpperands)
+                }
+
+            }
+        }
+        
+        
+        return (nil, ops, EvaluationException.MissingOpperands)
+    }
+    
+    
     
     /*************** Model state maintenance ***************/
     
@@ -169,7 +247,7 @@ class CalculatorBrain: Printable {
             return (symbol, remainingOps)
         case .Operand(let value):
             return ("\(value)", remainingOps)
-        case .UnaryOperation(let symbol, _):
+        case .UnaryOperation(let symbol, _, _):
             if !remainingOps.isEmpty {
                 let term = remainingOps.removeLast()
                 let termDescriptionResult = describe(term, opStack: remainingOps)
@@ -179,7 +257,7 @@ class CalculatorBrain: Printable {
             }
             //fallthrough for empty opstack or no valid description on remaining stack
             return ("\(op)(?)", remainingOps)
-        case .BinaryOperation(let opSymbol, let opWeight, _):
+        case .BinaryOperation(let opSymbol, let opWeight, _, _):
             //used to output terms in the correct order
             var term1Str = "", term2Str = ""
 
@@ -208,7 +286,7 @@ class CalculatorBrain: Printable {
                                 // ex: π + ?, x * ?, ? - 2.5, ? / cos(90)
                                 // no perens needed
                                 term1Str = description1
-                            case .BinaryOperation(let term1Symbol, let term1Weight, _):
+                            case .BinaryOperation(let term1Symbol, let term1Weight, _, _):
                                 // ex: (4+3) + ?, (4-3) * ?, etc.
                                 // if operation weights are equiv, no perens needed.
 
@@ -224,7 +302,7 @@ class CalculatorBrain: Printable {
                                 // ex: ? + π, ? * cos(90), etc
                                 // no perens needed
                                 term2Str = description2
-                            case .BinaryOperation(let term2Symbol, let term2Weight, _):
+                            case .BinaryOperation(let term2Symbol, let term2Weight, _, _):
                                 // ex: ? * (4+3), ? + (4-3)
                                 // if operation weights are equiv, no perens needed.
                                 if opWeight != term2Weight {
