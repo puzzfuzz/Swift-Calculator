@@ -16,7 +16,6 @@ class ViewController: UIViewController {
     var brain = CalculatorBrain()
     
     var userIsTyping = false
-//    var opperandHistory = [String]()
 
     // Handles conversion to/from Double for primary display
     var displayValue: Double? {
@@ -46,7 +45,6 @@ class ViewController: UIViewController {
     func resetData() {
         userIsTyping = false
         brain.reset()
-//        opperandHistory = [String]()
     }
     
     func resetView() {
@@ -112,6 +110,20 @@ class ViewController: UIViewController {
         }
     }
     
+    @IBAction func memoryGetTouched(sender: UIButton) {
+        if userIsTyping {
+            enter()
+        }
+        brain.pushOperand("M")
+        displayValue = brain.evaluate()
+    }
+    
+    @IBAction func memorySetTouched(sender: UIButton) {
+        userIsTyping = false
+        brain.variableValues["M"] = displayValue
+        displayValue = brain.evaluate()
+    }
+    
     /****** ENTER button and opperand publishing / history handling ******/
     
     @IBAction func enterTouched(sender: AnyObject) {
@@ -129,16 +141,13 @@ class ViewController: UIViewController {
             displayValue = brain.pushOperand(num)
 
             if shouldUpdateHistory {
-//                updateHistory(display.text!)
                 updateHistory()
             }
         }
         
     }
     
-//    func updateHistory(op: String) {
     func updateHistory() {
-//        opperandHistory.append(op)
         history.text! = "\(brain)"
     }
     
@@ -151,8 +160,6 @@ class ViewController: UIViewController {
         if let operation = sender.currentTitle {
             displayValue = brain.performOperation(operation)
             updateHistory()
-//            updateHistory(operation)
-//            updateHistory("=")
         }
         
     }
@@ -162,7 +169,6 @@ class ViewController: UIViewController {
             enter()
         }
         display.text! = "\(constant)"
-//        updateHistory(symbol)
         updateHistory()
         enter(false)
     }

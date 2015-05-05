@@ -57,6 +57,7 @@ class CalculatorBrain: Printable {
     
     func reset() {
         opStack = [Op]()
+        variableValues = [String:Double]()
     }
     
     func pushOperand(operand: Double) -> Double? {
