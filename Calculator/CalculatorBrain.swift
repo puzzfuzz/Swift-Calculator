@@ -11,6 +11,7 @@ import Foundation
 class CalculatorBrain: Printable {
     
     private enum Op: Printable {
+        
         case Consant(String, Double)
         case Operand(Double)
         case Variable(String)
@@ -54,11 +55,8 @@ class CalculatorBrain: Printable {
         learnOp(Op.UnaryOperation("sin", sin))
         learnOp(Op.UnaryOperation("cos", cos))
     }
-    
-    func reset() {
-        opStack = [Op]()
-        variableValues = [String:Double]()
-    }
+
+    /*************** Primary Operation API ***************/
     
     func pushOperand(operand: Double) -> Double? {
         opStack.append(Op.Operand(operand))
@@ -115,6 +113,27 @@ class CalculatorBrain: Printable {
         
         
         return (nil, ops)
+    }
+    
+    /*************** Model state maintenance ***************/
+    
+    func reset() {
+        clearOpStack()
+        cearVariables()
+    }
+    
+    func clearOpStack() {
+        opStack = [Op]()
+    }
+    
+    func cearVariables() {
+        variableValues = [String:Double]()
+    }
+    
+    func undoOp() {
+        if !opStack.isEmpty {
+            opStack.removeLast()
+        }
     }
     
     // *************** CalculatorBrain Description ***************

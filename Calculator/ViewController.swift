@@ -59,10 +59,18 @@ class ViewController: UIViewController {
             if count(display.text!) > 1 {
                 display.text! = dropLast(display.text!)
             } else if count(display.text!) == 1 {
-                display.text! = "0"
                 userIsTyping = false
+                display.text! = "0"
             }
+        } else {
+            undoOp()
         }
+    }
+    
+    func undoOp() {
+        brain.undoOp()
+        displayValue = brain.evaluate()
+        updateHistory()
     }
     
     
@@ -124,6 +132,28 @@ class ViewController: UIViewController {
         displayValue = brain.evaluate()
     }
     
+    /****** FUNCTION and CONSTANT button handling ******/
+    
+    @IBAction func functionTouched(sender: UIButton) {
+        if userIsTyping {
+            enter()
+        }
+        if let operation = sender.currentTitle {
+            displayValue = brain.performOperation(operation)
+            updateHistory()
+        }
+        
+    }
+    
+    func enterConstant (constant: Double, withSymbol symbol:String) {
+        if userIsTyping {
+            enter()
+        }
+        display.text! = "\(constant)"
+        updateHistory()
+        enter(false)
+    }
+    
     /****** ENTER button and opperand publishing / history handling ******/
     
     @IBAction func enterTouched(sender: AnyObject) {
@@ -150,28 +180,5 @@ class ViewController: UIViewController {
     func updateHistory() {
         history.text! = "\(brain)"
     }
-    
-    /****** FUNCTION and CONSTANT button handling ******/
-    
-    @IBAction func functionTouched(sender: UIButton) {
-        if userIsTyping {
-            enter()
-        }
-        if let operation = sender.currentTitle {
-            displayValue = brain.performOperation(operation)
-            updateHistory()
-        }
-        
-    }
-    
-    func enterConstant (constant: Double, withSymbol symbol:String) {
-        if userIsTyping {
-            enter()
-        }
-        display.text! = "\(constant)"
-        updateHistory()
-        enter(false)
-    }
-    
 }
 
